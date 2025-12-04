@@ -2,16 +2,6 @@
 
 A Claude Code configuration system that links git branches to PRs and generates consistent PR descriptions without the slop.
 
-## The Problem
-
-I have been managing a lot of Claude Code sessions across branches linked to different PRs and also in separate projects. I have been using Claude to generate PR descriptions but it would generate them in a weird format with a lot of emoji slop.
-
-One option was to always resume conversations, but this eventually got difficult. For other work I would always have to prompt it how to generate the description.
-
-## The Solution
-
-After reading [this blog from Anthropic](https://www.anthropic.com/engineering/claude-code-best-practices), I created a simple set of commands and templates to handle this better.
-
 ## How It Works
 
 ### Starting a PR
