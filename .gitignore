@@ -1,0 +1,15 @@
+# Branch metadata files (user-specific)
+branches/
+
+# Local settings
+settings.local.json
+
+# macOS
+.DS_Store
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

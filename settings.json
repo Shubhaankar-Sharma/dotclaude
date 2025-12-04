@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/session-start.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Read(.claude/branches/**)",
+      "Write(.claude/branches/**)",
+      "Edit(.claude/branches/**)",
+      "Read(.claude/templates/**)",
+      "Read(.claude/commands/**)",
+      "Read(.claude/scripts/**)",
+      "Bash(.claude/scripts/**)"
+    ]
+  }
+}
