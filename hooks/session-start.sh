@@ -51,6 +51,16 @@ if [ -f "$METADATA_FILE" ]; then
         bash ".claude/scripts/compact-history.sh" "$METADATA_FILE" 2>/dev/null
     fi
 
+    # Check for pending review sessions
+    if command -v jq &> /dev/null; then
+        PENDING_REVIEWS=$(jq -r '[.reviewSessions[]? | select(.status == "completed")] | length' "$METADATA_FILE" 2>/dev/null || echo "0")
+        if [ "$PENDING_REVIEWS" -gt 0 ]; then
+            echo "⚠️  You have $PENDING_REVIEWS pending review session(s) with unapplied comments"
+            echo "   Run /apply-review to apply them"
+            echo ""
+        fi
+    fi
+
     echo "📎 Branch context loaded from $METADATA_FILE"
     echo ""
     echo "🤖 Branch Context:"

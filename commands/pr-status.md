@@ -16,6 +16,11 @@ Follow these steps:
    Last worked: <date>
    Commits: <count>
    Last commit: <sha>
+
+   Review Sessions: <total-sessions> (<completed-pending>, <applied>)
+   {{#if hasCompletedReviews}}
+   ⚠️  Pending reviews to apply - Run /apply-review
+   {{/if}}
    ```
 4. Show recent commits: `git log --oneline -5`
 5. Show git status: `git status --short`

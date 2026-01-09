@@ -68,8 +68,18 @@ mkdir -p .claude/branches
 
 Make scripts executable:
 ```bash
-chmod +x .claude/hooks/session-start.sh
-chmod +x .claude/scripts/compact-history.sh
+chmod +x hooks/session-start.sh
+chmod +x scripts/compact-history.sh
+chmod +x scripts/build-tui.sh
+```
+
+Build the diff-review TUI (requires Go 1.21+):
+```bash
+cd scripts/diff-review-tui
+go mod download
+go build -o ../diff-review -ldflags="-s -w" .
+chmod +x ../diff-review
+cd ../..
 ```
 
 The `settings.json` file is already configured with the session-start hook and necessary permissions.
@@ -82,6 +92,8 @@ The `settings.json` file is already configured with the session-start hook and n
 - `/pr-describe` - Generate PR description from git history and metadata
 - `/pr-status` - Show current PR context and branch status
 - `/session-end` - Save session summary before ending work
+- `/diff-review` - Launch interactive visual diff review TUI
+- `/apply-review` - Apply pending review comments from completed sessions
 
 ### Starting Work on a Branch
 
@@ -117,6 +129,210 @@ Saves a comprehensive session summary that gets added to the branch metadata.
 ```
 
 Copy output, paste into GitHub.
+
+### Visual Diff Review
+
+```bash
+/diff-review
+```
+
+Opens an interactive terminal UI for reviewing your changes with Claude. Features:
+- Navigate through diffs with syntax highlighting
+- Select lines and ask Claude questions about the code
+- Add review comments for batch processing
+- Request edits during conversation
+- Apply all feedback at once
+
+See the [Visual Diff Review](#visual-diff-review-system) section for details.
+
+## Visual Diff Review System
+
+An interactive terminal-based code review system that combines syntax-highlighted diff viewing with Claude's conversational capabilities.
+
+### Features
+
+- **Interactive TUI**: Navigate diffs with vim-style keybindings (j/k) in a rich terminal interface
+- **Syntax Highlighting**: Powered by Chroma - supports 150+ languages with beautiful color schemes
+- **Visual Selection**: Select multiple lines (like vim's visual mode) to discuss code blocks
+- **Conversational Review**: Press 'q' to ask Claude questions about specific code sections
+- **Context-Aware**: Claude sees ±20 lines around your selection plus full codebase access
+- **Request Edits**: Ask Claude to make changes during review, then refresh the diff
+- **Batch Comments**: Add review comments and apply them all at once
+- **Persistent Sessions**: All review data saved in branch metadata
+
+### Setup
+
+The TUI is built in Go for performance and portability. Build it once:
+
+```bash
+cd scripts/diff-review-tui
+go mod download
+go build -o ../diff-review -ldflags="-s -w" .
+chmod +x ../diff-review
+```
+
+Or use the one-liner:
+```bash
+cd scripts/diff-review-tui && go mod download && go build -o ../diff-review -ldflags="-s -w" . && chmod +x ../diff-review
+```
+
+### Basic Workflow
+
+1. **Start review**:
+   ```bash
+   /diff-review
+   ```
+
+2. **Navigate**: Use `j`/`k` or arrow keys to move through the diff
+
+3. **Ask questions**:
+   - Navigate to interesting line
+   - Press `Q` (Shift+q) to ask about current line
+   - Or press `v` to enter visual mode, select lines with `j`/`k`, then press `q`
+   - Claude shows context and answers your question
+   - Request edits if needed: "Change this to use X instead"
+   - Press Enter to return to TUI
+
+4. **Add comments for later**:
+   - Navigate to a line
+   - Press `c` to add a comment
+   - Type your feedback and press Enter
+   - Continue reviewing
+
+5. **Refresh after edits**:
+   - Press `r` to reload the diff after Claude makes changes
+   - See your requested changes immediately
+
+6. **Apply pending comments**:
+   - Press `a` in TUI to save and exit
+   - Or run `/apply-review` from command line
+   - Claude batch-processes all comments
+
+### Keybindings
+
+| Key | Action |
+|-----|--------|
+| `j` / `↓` | Move down one line |
+| `k` / `↑` | Move up one line |
+| `g` | Go to top |
+| `G` | Go to bottom |
+| `PgDn` | Page down |
+| `PgUp` | Page up |
+| `v` | Enter visual mode (line selection) |
+| `q` | Ask question about selected lines |
+| `Q` | Quick question about current line |
+| `c` | Add comment for batch processing |
+| `s` | Show summary of comments/conversations |
+| `a` | Apply pending comments (save & exit) |
+| `r` | Refresh diff (after Claude edits) |
+| `Esc` | Cancel current mode |
+| `Ctrl+C` | Quit review |
+
+### Example Session
+
+```bash
+# Make changes on feature branch
+git checkout -b feature/new-auth
+# ... make code changes ...
+
+# Start interactive review
+/diff-review
+```
+
+**In TUI:**
+1. Navigate to suspicious timeout value on line 45
+2. Press `Q` → Ask: "Why was this originally 10s?"
+3. Claude explains and shows related code
+4. Say: "Change it to 15s and add a comment explaining why"
+5. Claude makes the edit
+6. Press Enter to return to TUI
+7. Press `r` to refresh and see the change
+8. Continue reviewing other changes
+9. Press `v` on line 67, `j j j` to select 4 lines
+10. Press `q` → Ask: "Is this error handling correct?"
+11. Claude spots a bug: "You're returning before checking the error"
+12. Say: "Fix it"
+13. Claude fixes the code
+14. Return to TUI, press `r` to refresh
+15. Review looks good, press `Ctrl+C` to quit
+
+```bash
+# Verify all changes
+git diff
+
+# Commit everything (your original changes + Claude's fixes)
+git add .
+git commit -m "Add authentication with review fixes"
+```
+
+### Conversational Review Patterns
+
+**Pattern 1: Quick Question**
+- Navigate → Press `Q` → Ask → Return
+
+**Pattern 2: Discuss and Edit**
+- Select lines with `v` + `j`/`k` → Press `q` → Discuss → Request edit → Claude edits → Return → Press `r`
+
+**Pattern 3: Batch Comments**
+- Navigate → Press `c` → Add comment → Continue → Press `a` to apply all
+
+**Pattern 4: Explore Context**
+- Select section → Press `q` → "Show me where this is called" → Claude finds callers → Discuss architecture
+
+### Why It's Powerful
+
+Unlike traditional review tools, Claude has **full codebase access** during questions:
+- Find related code across the project
+- Explain why code was written a certain way
+- Show git blame history
+- Make edits based on discussion
+- Search for similar patterns
+- Understand broader architectural context
+
+### Review Data
+
+All review sessions are stored in branch metadata (`.claude/branches/<branch>.json`):
+
+```json
+{
+  "reviewSessions": [
+    {
+      "sessionId": "review-20240115-143000-abc123",
+      "timestamp": "2024-01-15T14:30:00.000Z",
+      "baseCommit": "abc123",
+      "headCommit": "def456",
+      "status": "completed",
+      "comments": [
+        {
+          "file": "src/handler.go",
+          "line": 45,
+          "type": "change",
+          "content": "Add nil check before dereferencing",
+          "context": "surrounding code...",
+          "addedAt": "2024-01-15T14:32:00.000Z"
+        }
+      ],
+      "conversations": [
+        {
+          "file": "src/handler.go",
+          "line": 67,
+          "question": "Why buffered channel?",
+          "answer": "Prevents goroutine blocking...",
+          "timestamp": "2024-01-15T14:35:00.000Z"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Requirements
+
+- **Go 1.21+** (for building the TUI binary)
+- **Git** (for diff generation)
+- **jq** (for JSON manipulation in bash scripts)
+
+After building once, the binary has no runtime dependencies.
 
 ## What Gets Tracked
 
@@ -154,14 +370,37 @@ Each branch gets a JSON file at `.claude/branches/<branch-name>.json`:
 
 ## Files
 
-- `.claude/settings.json` - Hook configuration
-- `.claude/hooks/session-start.sh` - Auto-context loader
-- `.claude/scripts/compact-history.sh` - History compaction
+### Core System
+- `settings.json` - Hook configuration and permissions
+- `hooks/session-start.sh` - Auto-context loader with review session checks
+- `scripts/compact-history.sh` - History compaction
 - `.claude/branches/<branch>.json` - Branch metadata (git-ignored)
-- `.claude/commands/*.md` - Slash commands
-- `.claude/prompts/pr-style-guide.md` - PR writing style
-- `.claude/templates/pr-description.md` - PR description template
-- `.claude/templates/session-summary.md` - Session summary template
+
+### Commands
+- `commands/pr-start.md` - Initialize PR tracking
+- `commands/pr-describe.md` - Generate PR description
+- `commands/pr-status.md` - Show PR context and review sessions
+- `commands/session-end.md` - Save session summary
+- `commands/diff-review.md` - Launch visual diff review TUI
+- `commands/apply-review.md` - Apply pending review comments
+
+### Templates & Prompts
+- `prompts/pr-style-guide.md` - PR writing style guide
+- `prompts/apply-review-comments.md` - Claude prompt for applying review feedback
+- `templates/pr-description.md` - PR description template
+- `templates/session-summary.md` - Session summary template
+- `templates/review-summary.md` - Review session summary template
+
+### Diff Review TUI
+- `scripts/diff-review-tui/main.go` - TUI entry point
+- `scripts/diff-review-tui/model.go` - Application state
+- `scripts/diff-review-tui/update.go` - Message handling
+- `scripts/diff-review-tui/view.go` - Rendering logic
+- `scripts/diff-review-tui/diff.go` - Diff parsing and syntax highlighting
+- `scripts/diff-review-tui/metadata.go` - JSON persistence
+- `scripts/diff-review-tui/go.mod` - Go dependencies
+- `scripts/diff-review` - Compiled binary (after build)
+- `scripts/build-tui.sh` - Build script
 
 ## Customization
 
@@ -194,10 +433,13 @@ If you want to do this, remove `.claude/branches/` from your `.gitignore` or kee
 
 ## Requirements
 
-- Claude Code CLI
-- Git (for branch detection and commit history)
-- GitHub CLI (`gh`) - Optional, for issue linking in PR descriptions
-- jq - Required for history compaction
+- **Claude Code CLI** - The AI-powered coding assistant
+- **Git** - For branch detection and commit history
+- **Go 1.21+** - Required to build the diff-review TUI
+- **jq** - Required for JSON manipulation and history compaction
+- **GitHub CLI (`gh`)** - Optional, for issue linking in PR descriptions
+
+Note: After building the diff-review TUI binary once, it has no runtime dependencies on Go.
 
 ## Troubleshooting
 
@@ -216,8 +458,38 @@ which jq
 
 Ensure scripts are executable:
 ```bash
-chmod +x .claude/hooks/session-start.sh
-chmod +x .claude/scripts/compact-history.sh
+chmod +x hooks/session-start.sh
+chmod +x scripts/compact-history.sh
+chmod +x scripts/build-tui.sh
+```
+
+### Diff review TUI not launching
+
+Build the binary:
+```bash
+cd scripts/diff-review-tui
+go mod download
+go build -o ../diff-review -ldflags="-s -w" .
+chmod +x ../diff-review
+```
+
+Verify it works:
+```bash
+scripts/diff-review --help
+```
+
+### Go dependencies failing
+
+Update Go to 1.21 or later:
+```bash
+go version  # Should show 1.21 or higher
+```
+
+On macOS:
+```bash
+brew install go
+# or
+brew upgrade go
 ```
 
 ## License
