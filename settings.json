@@ -1,4 +1,31 @@
 {
+  "permissions": {
+    "allow": [
+      "Read(**)",
+      "Glob(**)",
+      "Grep(**)",
+      "Edit(~/.claude/**)",
+      "Bash(~/.claude/hooks/**)",
+      "Bash(mkdir *)",
+      "Bash(chmod *)",
+      "Bash(cd *)",
+      "Bash(go *)",
+      "Bash(git *)",
+      "Bash(ls *)",
+      "Bash(pwd)",
+      "Bash(npx *)",
+      "Bash(codex *)",
+      "Bash(gh *)",
+      "Bash(cat *)",
+      "Bash(mktemp *)",
+      "Bash(which *)",
+      "mcp__playwright__*",
+      "WebSearch",
+      "WebFetch"
+    ]
+  },
+  "model": "opus[1m]",
+  "enableAllProjectMcpServers": true,
   "hooks": {
     "SessionStart": [
       {
@@ -6,44 +33,62 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/session-start.sh"
+            "command": "~/.claude/hooks/register-session.sh"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/focus-workspace.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/focus-workspace.sh"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/session-waiting.sh"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/session-active.sh"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/session-active.sh"
           }
         ]
       }
     ]
   },
-  "permissions": {
-    "allow": [
-      "Read(.claude/branches/**)",
-      "Write(.claude/branches/**)",
-      "Edit(.claude/branches/**)",
-      "Read(templates/**)",
-      "Write(templates/**)",
-      "Edit(templates/**)",
-      "Read(commands/**)",
-      "Write(commands/**)",
-      "Edit(commands/**)",
-      "Read(prompts/**)",
-      "Write(prompts/**)",
-      "Edit(prompts/**)",
-      "Read(scripts/**)",
-      "Write(scripts/**)",
-      "Edit(scripts/**)",
-      "Bash(scripts/**)",
-      "Read(hooks/**)",
-      "Edit(hooks/**)",
-      "Bash(hooks/**)",
-      "Read(**)",
-      "Edit(README.md)",
-      "Bash(mkdir *)",
-      "Bash(chmod *)",
-      "Bash(cd *)",
-      "Bash(go mod *)",
-      "Bash(go get *)",
-      "Bash(go build *)",
-      "Bash(git *)",
-      "Bash(ls *)",
-      "Bash(pwd)"
-    ]
-  }
+  "enabledPlugins": {
+    "gopls-lsp@claude-plugins-official": true
+  },
+  "skipDangerousModePermissionPrompt": true
 }
